@@ -78,14 +78,19 @@ fn window_should_hide(window: HWND, monitor: HMONITOR) -> Result<bool> {
         return NO_HIDE;
     }
 
-    // Ignore Iconic and owned windows that are not WX_EX_APPWINDOW.
     unsafe {
+        // Ignore Iconic and owned windows that are not WX_EX_APPWINDOW.
         let window_owner = GetWindow(window, GW_OWNER).unwrap_or(HWND::default());
-        let ex_style = GetWindowLongW(window, GWL_EXSTYLE);
+        let ex_style = WINDOW_EX_STYLE(GetWindowLongW(window, GWL_EXSTYLE) as u32);
         if IsIconic(window).as_bool()
             || (!window_owner.is_invalid()
-                && !WINDOW_EX_STYLE(ex_style as u32).contains(WS_EX_APPWINDOW))
+                && !ex_style.contains(WS_EX_APPWINDOW))
         {
+            return NO_HIDE;
+        }
+
+        // Ignore extended styles that implies the window is not in the taskbar.
+        if ex_style.contains(WS_EX_TOOLWINDOW) || ex_style.contains(WS_EX_NOACTIVATE) {
             return NO_HIDE;
         }
     }
